@@ -226,68 +226,62 @@ class MainPanel(wx.Panel):
 			if self.varlistbox3.IsSelected(varindex):
 				selected_variables.append(varindex)
 
-		# print selected_variables
-		# print [self.titleset[yy] for yy in selected_variables]
-
-
-
 		_S= self.dataset[selected_variables,:1000]
-		
-		if self.dataset2 != None:
+		_B= self.dataset2[selected_variables,:1000]
 
-			print '1'
-			_B= self.dataset2[selected_variables,:1000]
-			print '2'
+		v = selected_variables[0]
 
-			_ST = np.ones((_S.shape[-1]))
-			_BT = -1*np.ones((_B.shape[-1]))
-			print '3'
-			_X = np.concatenate((_S,_B),axis=1)
-			_Y = np.concatenate((_ST,_BT),axis=0)
-			print '4'
+		if self.dataset2 != None or _S.shape[0]<=1:
+			if len(selected_variables)==1:
+				v = selected_variables[0]
+				self.mainaxis2.hist(_S[0,:], 50,alpha=0.75,label=('Training Subset: '+self.infile.split('/')[-1].split('.')[0]),histtype='step')
+				self.mainaxis2.hist(_B[0,:], 50,edgecolor='red',alpha=0.75,label=('Training Subset: '+self.infile2.split('/')[-1].split('.')[0]),histtype='step')
 
-			_X=_X.transpose()
-			print '##',_X.shape[-1]
-			if _X.shape[-1]>1:
-				
-				print 'here...'
-
-				print ' -------------------------- '
-		        svm = SVC(C = .1, kernel = 'rbf')
-		        svm.fit(_X,_Y)
-
-		        _SE = []
-		        _BE = []
-		        for ii in range(_S.shape[-1]):
-		        	_SE.append(svm.decision_function(_B[:,ii])[0][0])
-		        	_BE.append(svm.decision_function(_B[:,ii])[0][0])
-
-				self.mainaxis2.hist(_SE, 50,alpha=0.75,label=(self.infile).split('.')[0].split('/')[-1],histtype='step')
-				self.mainaxis2.hist(_BE, 50,alpha=0.75,label=(self.infile2).split('.')[0].split('/')[-1],histtype='step')
+				self.mainaxis2.set_xlabel(self.titleset[self.selindex])
+				self.mainaxis2.set_ylabel('Probability')
 				legend2 = self.mainaxis2.legend(loc='upper left', shadow=True)
+
+
 				for alabel in legend2.get_texts():
 					alabel.set_fontsize('small')
 
-		print '##@@',_S.shape[0]
-		if self.dataset2 == None or _S.shape[0]<=1:
-			for v in selected_variables:
-				self.mainaxis2.hist(self.dataset[v], 50,alpha=0.75,label=(self.titleset[v]).split('.')[0].split('/')[-1],histtype='step')
-				# self.mainaxis2.set_xlabel(self.titleset[self.selindex])
-				self.mainaxis2.set_ylabel('Probability')
+
+		if _S.shape[0]>1:
+
+			_ST = np.ones((_S.shape[-1]))
+			_BT = -1*np.ones((_B.shape[-1]))
+			_X = np.concatenate((_S,_B),axis=1)
+			_Y = np.concatenate((_ST,_BT),axis=0)
+			_X=_X.transpose()
+
+			svm = SVC(C = .1, kernel = 'rbf')
+			svm.fit(_X,_Y)
+
+			_S_TrainHist = svm.decision_function(_S.transpose()).transpose()[0]
+			_B_TrainHist = svm.decision_function(_B.transpose()).transpose()[0]
+			self.mainaxis2.hist(_S_TrainHist, 50,alpha=0.75,label=(self.infile.split('/')[-1].split('.')[0]),histtype='step')
+			self.mainaxis2.hist(_B_TrainHist, 50,edgecolor='red',alpha=0.75,label=(self.infile2.split('/')[-1].split('.')[0]),histtype='step')
+
+			self.mainaxis2.axvline(x=0,color='black',linestyle='--',alpha=0.2)
+
+			_xmax = 1.2*max([_S_TrainHist.max(),_B_TrainHist.max()])
+			_xmin = -1.2*(abs(1.0*min([_S_TrainHist.min(),_B_TrainHist.min()])))		
+			self.mainaxis2.axvspan(0.0, _xmax, color='blue',alpha=0.08)
+			self.mainaxis2.axvspan(_xmin,0.0, color='red',alpha=0.08)
+
+			self.mainaxis2.set_xlim(_xmin,_xmax  )
+
+			self.mainaxis2.set_xlabel('Machine Learning Classifier')
+			self.mainaxis2.set_ylabel('Probability')
 			legend2 = self.mainaxis2.legend(loc='upper left', shadow=True)
+
+
 			for alabel in legend2.get_texts():
 				alabel.set_fontsize('small')
 
 
-
-		print ' What'
 		self.canvas2.draw()		
 		self.canvas2.resize(10,50)
-
-
-
-		# if self.infile2!=None:
-		# 	self.mainaxis.hist(self.dataset2[self.selindex], 50,edgecolor='red',alpha=0.75,label=(self.infile2).split('.')[0].split('/')[-1],histtype='step')
 
 
 
