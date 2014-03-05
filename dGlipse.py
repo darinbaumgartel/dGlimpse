@@ -104,12 +104,26 @@ class MainPanel(wx.Panel):
 		self.varlistbox2 = wx.ListBox(choices=[], id=wx.NewId(), name='varlistbox2', parent=self.panelOne, pos=(160, 110), size=wx.Size(184, 260), style=0)
 		self.varlistbox2.Bind(wx.EVT_LISTBOX, self.OnSelect2)
 
+		self.possible_kernels = ['Kernel = '+k for k in ['rbf','linear']]
+		self.kernelchoicebox = wx.ComboBox(value=self.possible_kernels[0],choices=self.possible_kernels, id=wx.NewId(), name='kernelchoicebox', parent=self.panelThree, pos=(160, 110), size=wx.DefaultSize)
+		self.kernelchoicebox.Bind(wx.EVT_COMBOBOX, self.OnSelectKernel)
+		self.chosenkernel = self.possible_kernels[0].split('=')[-1].replace(' ','')
+
+		self.possible_cvalues = ['C = '+str((.00001*(10**_c))) for _c in range(11)]
+		self.cvaluechoicebox = wx.ComboBox(value=self.possible_cvalues[0],choices=self.possible_cvalues, id=wx.NewId(), name='cvaluechoicebox', parent=self.panelThree, pos=(160, 140), size=wx.DefaultSize)
+		self.cvaluechoicebox.Bind(wx.EVT_COMBOBOX, self.OnSelectCvalue)
+		self.chosencvalue = self.possible_cvalues[0].split('=')[-1].replace(' ','')
+
+
+
 		self.varlistbox3 = wx.ListBox(choices=[], id=wx.NewId(), name='varlistbox3', parent=self.panelThree, pos=(10, 110), size=wx.Size(140, 260), style=wx.LB_MULTIPLE)
 		self.varlistbox3.Bind(wx.EVT_LISTBOX, self.OnSelect3)
 
+
+
 		self.selindex = 0
 		self.compindex = 0
-
+		self.selected_variables = []
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		sizer.Add(topSplitter, 1, wx.EXPAND)
 		self.SetSizer(sizer)
@@ -133,7 +147,7 @@ class MainPanel(wx.Panel):
 			paths = dlg.GetPaths()
 			infile =  str(paths[0])
 			self.infile=infile
-		self.fbutton.SetBackgroundColour('green')	
+		self.fbutton.SetBackgroundColour('lightblue')	
 		[self.dataset,self.titleset] = ImportDatafile(infile).FromVerticalCSV()
 		self.varlistbox.Clear()
 		for vartitle in self.titleset:
@@ -155,7 +169,7 @@ class MainPanel(wx.Panel):
 		if dlg.ShowModal() == wx.ID_OK:
 			paths = dlg.GetPaths()
 			self.infile2 =  str(paths[0])
-		self.fbutton2.SetBackgroundColour('lightblue')	
+		self.fbutton2.SetBackgroundColour('pink')	
 
 		[self.dataset2,self.titleset2] = ImportDatafile(self.infile2).FromVerticalCSV()
 	   
@@ -214,18 +228,15 @@ class MainPanel(wx.Panel):
 		self.canvas.resize(10,50)
 
 
-	def OnSelect3(self, evt):
+
+	def DoMVA(self):
 
 		self.figure2 = Figure(figsize=(6, 4.5), dpi=100, facecolor='w', edgecolor='k')
 		self.mainaxis2 = self.figure2.add_subplot(1,1,1)
 
 		self.canvas2 = FigureCanvas(self.panelFour, -1, self.figure2)
 
-		selected_variables = []
-		for varindex in range(len(self.titleset)):
-			if self.varlistbox3.IsSelected(varindex):
-				selected_variables.append(varindex)
-
+		selected_variables = self.selected_variables
 		_S= self.dataset[selected_variables,:1000]
 		_B= self.dataset2[selected_variables,:1000]
 
@@ -254,7 +265,8 @@ class MainPanel(wx.Panel):
 			_Y = np.concatenate((_ST,_BT),axis=0)
 			_X=_X.transpose()
 
-			svm = SVC(C = .1, kernel = 'rbf')
+			print 'USING:',self.chosenkernel
+			svm = SVC(C = float(self.chosencvalue), kernel = self.chosenkernel)
 			svm.fit(_X,_Y)
 
 			_S_TrainHist = svm.decision_function(_S.transpose()).transpose()[0]
@@ -275,6 +287,7 @@ class MainPanel(wx.Panel):
 			self.mainaxis2.set_ylabel('Probability')
 			legend2 = self.mainaxis2.legend(loc='upper left', shadow=True)
 
+			
 
 			for alabel in legend2.get_texts():
 				alabel.set_fontsize('small')
@@ -283,6 +296,34 @@ class MainPanel(wx.Panel):
 		self.canvas2.draw()		
 		self.canvas2.resize(10,50)
 
+
+
+
+	def OnSelectKernel(self,evt):
+		# print "Rechoosing Kernel"
+		self.chosenkernel = self.possible_kernels[evt.GetSelection()].split('=')[-1].replace(' ','')
+		# print self.chosenkernel
+		if len(self.selected_variables)>0:
+			self.DoMVA()
+
+	def OnSelectCvalue(self,evt):
+		self.chosencvalue = self.possible_cvalues[evt.GetSelection()].split('=')[-1].replace(' ','')
+		# print self.chosenkernel
+		if len(self.selected_variables)>0:
+			self.DoMVA()
+
+
+	def OnSelect3(self, evt):
+
+
+
+		self.selected_variables = []
+		for varindex in range(len(self.titleset)):
+			if self.varlistbox3.IsSelected(varindex):
+				self.selected_variables.append(varindex)
+
+		if len(self.selected_variables)>0:
+			self.DoMVA()
 
 
 
